@@ -29,8 +29,8 @@ export default function PDFTemplate({ facture }: PDFTemplateProps) {
       <div style={{ 
         textAlign: 'center', 
         marginBottom: '30px', 
-        backgroundColor: '#1e3a5f',
-        color: 'white',
+        backgroundColor: '#ffffff',
+        color: '#99c1f6',
         borderRadius: '8px',
         padding: '20px'
       }}>
@@ -56,18 +56,24 @@ export default function PDFTemplate({ facture }: PDFTemplateProps) {
           marginBottom: '20px'
         }}>
           <div style={{
-            background: '#1e3a5f',
-            color: '#ffffff',
-            padding: '5px 25px',
-            fontSize: '16px',
+            background: '#ffffff',
+            color: '#77a9ec',
+            padding: '5px 20px',
+            fontSize: '5px',
             fontWeight: 'bold',
             textTransform: 'uppercase',
-            letterSpacing: '3px',
-            border: '1px solid #1e3a5f',
+            letterSpacing: '1px',
+            border: '1px solid #77a9ec',
             borderRadius: '3px',
-            fontFamily: 'Arial, sans-serif'
+            fontFamily: 'Arial, sans-serif',
+            textAlign: 'center',
+            lineHeight: '1.5'
           }}>
-            PAIEMENT PARTIEL
+            QUINCAILLERIE LE SALOUM<br />
+            SOPE NABY - CISSE & FRERES<br />
+            En face Pont de l'Aéroport à 200m<br />
+            Tél. : 77 643 58 15 / 77 894 07 77 / 76 343 19 33<br />
+            LIVRÉ NON PAYE
           </div>
         </div>
       )}
@@ -82,8 +88,8 @@ export default function PDFTemplate({ facture }: PDFTemplateProps) {
           <div style={{
             background: '#ffffff',
             color: '#77a9ec',
-            padding: '8px 30px',
-            fontSize: '14px',
+            padding: '5px 20px',
+            fontSize: '5px',
             fontWeight: 'bold',
             textTransform: 'uppercase',
             letterSpacing: '1px',
