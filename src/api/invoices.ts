@@ -1,3 +1,4 @@
+// src/api/invoices.ts
 import axios from 'axios';
 import type { Facture, CreateFacturePayload, UpdateFacturePayload } from '../types';
 
@@ -25,10 +26,11 @@ export const fetchInvoices = async (params?: any): Promise<{ data: Facture[]; cu
   return response.data;
 };
 
-// Récupérer une facture par ID
+// Récupérer une facture par ID - CORRIGÉ
 export const fetchInvoiceById = async (id: number): Promise<Facture> => {
   const response = await api.get(`/factures/${id}`);
-  return response.data;
+  // Votre API retourne { facture: {...} }
+  return response.data.facture || response.data;
 };
 
 // Créer une facture
@@ -37,10 +39,10 @@ export const createInvoice = async (invoiceData: CreateFacturePayload): Promise<
   return response.data.facture;
 };
 
-// Mettre à jour une facture (si votre backend le permet)
+// Mettre à jour une facture - CORRIGÉ
 export const updateInvoice = async ({ id, ...invoiceData }: { id: number } & UpdateFacturePayload): Promise<Facture> => {
   const response = await api.put(`/factures/${id}`, invoiceData);
-  return response.data;
+  return response.data.facture || response.data;
 };
 
 // Supprimer une facture

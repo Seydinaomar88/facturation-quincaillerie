@@ -1,13 +1,21 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchClients, createClient } from '../../api/clients';
+import { fetchClients, createClient, updateClient, deleteClient } from '../../api/clients';
 import { useToast } from '../../hooks/useToast';
 import CompanyHeader from '../common/CompanyHeader';
 
+interface Client {
+  id: number;
+  nom: string;
+  telephone: string;
+}
+
 export default function ClientsManager() {
   const [showForm, setShowForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [newClient, setNewClient] = useState({ nom: '', telephone: '' });
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const queryClient = useQueryClient();
   const { showSuccessToast, showErrorToast } = useToast();
 
@@ -16,6 +24,7 @@ export default function ClientsManager() {
     queryFn: fetchClients,
   });
 
+  // Mutation pour créer un client
   const createMutation = useMutation({
     mutationFn: createClient,
     onSuccess: () => {
@@ -29,6 +38,33 @@ export default function ClientsManager() {
     },
   });
 
+  // Mutation pour modifier un client
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { nom: string; telephone: string } }) => 
+      updateClient(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      setShowEditForm(false);
+      setEditingClient(null);
+      showSuccessToast('Client modifié avec succès !');
+    },
+    onError: (err: any) => {
+      showErrorToast(err.response?.data?.message || 'Erreur lors de la modification');
+    },
+  });
+
+  // Mutation pour supprimer un client
+  const deleteMutation = useMutation({
+    mutationFn: deleteClient,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      showSuccessToast('Client supprimé avec succès !');
+    },
+    onError: (err: any) => {
+      showErrorToast(err.response?.data?.message || 'Erreur lors de la suppression');
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClient.nom || !newClient.telephone) {
@@ -36,6 +72,31 @@ export default function ClientsManager() {
       return;
     }
     createMutation.mutate(newClient);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingClient) return;
+    if (!editingClient.nom || !editingClient.telephone) {
+      showErrorToast('Veuillez remplir tous les champs');
+      return;
+    }
+    updateMutation.mutate({ 
+      id: editingClient.id, 
+      data: { nom: editingClient.nom, telephone: editingClient.telephone } 
+    });
+  };
+
+  const handleDelete = (client: Client) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le client "${client.nom}" ?`)) {
+      deleteMutation.mutate(client.id);
+    }
+  };
+
+  const handleEdit = (client: Client) => {
+    setEditingClient(client);
+    setShowEditForm(true);
+    setShowForm(false);
   };
 
   const filteredClients = clients?.filter(client =>
@@ -63,7 +124,11 @@ export default function ClientsManager() {
           />
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            setShowForm(!showForm);
+            setShowEditForm(false);
+            setEditingClient(null);
+          }}
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,6 +185,56 @@ export default function ClientsManager() {
         </div>
       )}
 
+      {/* Formulaire de modification */}
+      {showEditForm && editingClient && (
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Modifier le client</h3>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet</label>
+                <input
+                  type="text"
+                  value={editingClient.nom}
+                  onChange={(e) => setEditingClient({ ...editingClient, nom: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="Ex: Mamadou Diallo"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+                <input
+                  type="tel"
+                  value={editingClient.telephone}
+                  onChange={(e) => setEditingClient({ ...editingClient, telephone: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="Ex: 77 123 45 67"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditForm(false);
+                  setEditingClient(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={updateMutation.isPending}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {updateMutation.isPending ? 'Modification...' : 'Modifier le client'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Liste des clients */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="px-6 py-4 border-b bg-gray-50">
@@ -153,12 +268,21 @@ export default function ClientsManager() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button className="text-blue-600 hover:text-blue-800 p-1">
+                    <button
+                      onClick={() => handleEdit(client)}
+                      className="text-blue-600 hover:text-blue-800 p-1 transition-colors"
+                      title="Modifier"
+                    >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
-                    <button className="text-red-600 hover:text-red-800 p-1">
+                    <button
+                      onClick={() => handleDelete(client)}
+                      disabled={deleteMutation.isPending}
+                      className="text-red-600 hover:text-red-800 p-1 transition-colors disabled:opacity-50"
+                      title="Supprimer"
+                    >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>

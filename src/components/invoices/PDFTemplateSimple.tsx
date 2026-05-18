@@ -9,10 +9,76 @@ export default function PDFTemplate({ facture }: PDFTemplateProps) {
     return amount.toLocaleString() + ' FCFA';
   };
 
-  // Vérifier les statuts
-  const isDelivered = facture.statut_livraison === 'LIVRE';
-  const isPaid = facture.statut_paiement === 'PAYE';
-  const isPartiallyPaid = facture.statut_paiement === 'PARTIEL';
+  // Déterminer le type de tampon à afficher
+  const getStampConfig = () => {
+    const isPaid = facture.statut_paiement === 'PAYE';
+    const isPartiallyPaid = facture.statut_paiement === 'PARTIEL';
+    const isDelivered = facture.statut_livraison === 'LIVRE';
+    const isNotDelivered = facture.statut_livraison === 'NON_LIVRE';
+
+    // Texte de base de la quincaillerie
+    const companyText = `QUINCAILLERIE LE SALOUM\nSOPE NABY - CISSE & FRERES\nEn face Pont de l'Aéroport à 200m\nTél. : 77 643 58 15 / 77 894 07 77 / 76 343 19 33\n`;
+
+    // Cas 1: Payé et Livré
+    if (isPaid && isDelivered) {
+      return {
+        show: true,
+        text: `${companyText}PAYÉ LIVRÉ`,
+        color: '#22c55e', // Vert
+        borderColor: '#22c55e'
+      };
+    }
+    
+    // Cas 2: Payé mais Non livré
+    if (isPaid && isNotDelivered) {
+      return {
+        show: true,
+        text: `${companyText}PAYÉ NON LIVRÉ`,
+        color: '#eab308', // Jaune
+        borderColor: '#eab308'
+      };
+    }
+    
+    // Cas 3: Paiement partiel et Livré
+    if (isPartiallyPaid && isDelivered) {
+      return {
+        show: true,
+        text: `${companyText}PARTIEL LIVRÉ`,
+        color: '#f97316', // Orange
+        borderColor: '#f97316'
+      };
+    }
+    
+    // Cas 4: Paiement partiel et Non livré
+    if (isPartiallyPaid && isNotDelivered) {
+      return {
+        show: true,
+        text: `${companyText}PARTIEL NON LIVRÉ`,
+        color: '#ef4444', // Rouge
+        borderColor: '#ef4444'
+      };
+    }
+    
+    // Cas 5: Non payé et Livré
+    if (!isPaid && !isPartiallyPaid && isDelivered) {
+      return {
+        show: true,
+        text: `${companyText}LIVRÉ NON PAYÉ`,
+        color: '#f59e0b', // Orange
+        borderColor: '#f59e0b'
+      };
+    }
+    
+    // Cas 6: Non payé et Non livré (pas de tampon)
+    return {
+      show: false,
+      text: '',
+      color: '',
+      borderColor: ''
+    };
+  };
+
+  const stampConfig = getStampConfig();
 
   return (
     <div id="pdf-content" style={{ 
@@ -25,7 +91,7 @@ export default function PDFTemplate({ facture }: PDFTemplateProps) {
       position: 'relative'
     }}>
       
-      {/* EN-TÊTE DE LA FACTURE - Exactement comme sur l'image */}
+      {/* EN-TÊTE DE LA FACTURE */}
       <div style={{ 
         textAlign: 'center', 
         marginBottom: '30px', 
@@ -48,8 +114,8 @@ export default function PDFTemplate({ facture }: PDFTemplateProps) {
         </p>
       </div>
 
-      {/* CACHE PAIEMENT PARTIEL - Pour les factures partiellement payées */}
-      {isPartiallyPaid && !isPaid && (
+      {/* TAMPON (CACHE) - Affiché selon la configuration */}
+      {stampConfig.show && (
         <div style={{ 
           display: 'flex',
           justifyContent: 'center',
@@ -57,53 +123,21 @@ export default function PDFTemplate({ facture }: PDFTemplateProps) {
         }}>
           <div style={{
             background: '#ffffff',
-            color: '#77a9ec',
-            padding: '5px 20px',
-            fontSize: '5px',
+            color: stampConfig.color,
+            padding: '8px 20px',
+            fontSize: '10px',
             fontWeight: 'bold',
             textTransform: 'uppercase',
             letterSpacing: '1px',
-            border: '1px solid #77a9ec',
-            borderRadius: '3px',
+            border: `2px solid ${stampConfig.borderColor}`,
+            borderRadius: '5px',
             fontFamily: 'Arial, sans-serif',
             textAlign: 'center',
             lineHeight: '1.5'
           }}>
-            QUINCAILLERIE LE SALOUM<br />
-            SOPE NABY - CISSE & FRERES<br />
-            En face Pont de l'Aéroport à 200m<br />
-            Tél. : 77 643 58 15 / 77 894 07 77 / 76 343 19 33<br />
-            LIVRÉ NON PAYE
-          </div>
-        </div>
-      )}
-
-      {/* CACHE LIVRÉ - UNIQUEMENT pour les factures livrées */}
-      {isDelivered && (
-        <div style={{ 
-          display: 'flex',
-          justifyContent: 'center',
-          marginBottom: '20px'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            color: '#77a9ec',
-            padding: '5px 20px',
-            fontSize: '5px',
-            fontWeight: 'bold',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            border: '1px solid #77a9ec',
-            borderRadius: '3px',
-            fontFamily: 'Arial, sans-serif',
-            textAlign: 'center',
-            lineHeight: '1.5'
-          }}>
-            QUINCAILLERIE LE SALOUM<br />
-            SOPE NABY - CISSE & FRERES<br />
-            En face Pont de l'Aéroport à 200m<br />
-            Tél. : 77 643 58 15 / 77 894 07 77 / 76 343 19 33<br />
-            PAYE LIVRÉ
+            {stampConfig.text.split('\n').map((line, index) => (
+              <div key={index}>{line}</div>
+            ))}
           </div>
         </div>
       )}

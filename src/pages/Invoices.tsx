@@ -4,12 +4,15 @@ import { fetchInvoices, deleteInvoice, getWhatsAppLink } from '../api/invoices';
 import { useToast } from '../hooks/useToast';
 import type { Facture } from '../types';
 import InvoiceForm from '../components/invoices/InvoiceForm';
+import InvoiceEditForm from '../components/invoices/InvoiceEditForm'; // Ajouté
 import CompanyHeader from '../components/common/CompanyHeader';
 import PDFTemplate from '../components/invoices/PDFTemplateSimple';
 
 function InvoicesPage() {
   const [showForm, setShowForm] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(''); // État pour la recherche
+  const [showEditForm, setShowEditForm] = useState(false); // Ajouté
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null); // Ajouté
+  const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
   const { showSuccessToast, showErrorToast } = useToast();
 
@@ -20,12 +23,10 @@ function InvoicesPage() {
 
   const invoices = invoicesData?.data || [];
 
-  // Filtrer les factures par nom de client ou ID
   const filteredInvoices = invoices.filter((facture: Facture) => {
     const clientName = facture.client?.nom?.toLowerCase() || '';
     const invoiceId = `#${facture.id}`;
     const search = searchTerm.toLowerCase();
-    
     return clientName.includes(search) || invoiceId.includes(search);
   });
 
@@ -41,6 +42,13 @@ function InvoicesPage() {
     },
   });
 
+  // Nouvelle fonction pour gérer la modification
+  const handleEdit = (id: number) => {
+    setSelectedInvoiceId(id);
+    setShowEditForm(true);
+    setShowForm(false); // Fermer le formulaire de création si ouvert
+  };
+
   const handleWhatsApp = async (id: number) => {
     try {
       const { whatsapp_url } = await getWhatsAppLink(id);
@@ -52,7 +60,6 @@ function InvoicesPage() {
 
   const handlePdf = async (facture: Facture) => {
     try {
-      // Créer un conteneur temporaire
       const tempDiv = document.createElement('div');
       tempDiv.style.position = 'absolute';
       tempDiv.style.left = '-9999px';
@@ -60,19 +67,15 @@ function InvoicesPage() {
       tempDiv.id = 'temp-pdf-container';
       document.body.appendChild(tempDiv);
 
-      // Rendre le composant
       const { createRoot } = await import('react-dom/client');
       const root = createRoot(tempDiv);
       root.render(<PDFTemplate facture={facture} />);
 
-      // Attendre le rendu
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Générer le PDF - import dynamique
       const { generatePDF } = await import('../utils/generatePDF');
       await generatePDF('pdf-content', `facture_${facture.id}.pdf`);
 
-      // Nettoyer
       root.unmount();
       document.body.removeChild(tempDiv);
       
@@ -112,7 +115,6 @@ function InvoicesPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Liste des factures</h1>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          {/* Barre de recherche */}
           <div className="relative">
             <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -126,7 +128,11 @@ function InvoicesPage() {
             />
           </div>
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              setShowForm(!showForm);
+              setShowEditForm(false); // Fermer l'édition si ouverte
+              setSelectedInvoiceId(null);
+            }}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,6 +143,7 @@ function InvoicesPage() {
         </div>
       </div>
 
+      {/* Formulaire de création */}
       {showForm && (
         <div className="mb-8">
           <CompanyHeader title="NOUVELLE FACTURE" />
@@ -144,6 +151,25 @@ function InvoicesPage() {
         </div>
       )}
 
+      {/* Formulaire de modification */}
+      {showEditForm && selectedInvoiceId && (
+        <div className="mb-8">
+          <CompanyHeader title="MODIFIER LA FACTURE" />
+          <InvoiceEditForm
+            invoiceId={selectedInvoiceId}
+            onSuccess={() => {
+              setShowEditForm(false);
+              setSelectedInvoiceId(null);
+            }}
+            onCancel={() => {
+              setShowEditForm(false);
+              setSelectedInvoiceId(null);
+            }}
+          />
+        </div>
+      )}
+
+      {/* Tableau des factures */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full">
@@ -196,6 +222,14 @@ function InvoicesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex gap-2 justify-center">
+                        {/* Nouveau bouton Modifier */}
+                        <button
+                          onClick={() => handleEdit(facture.id)}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-xs transition-colors"
+                          title="Modifier"
+                        >
+                          Modifier
+                        </button>
                         <button
                           onClick={() => handlePdf(facture)}
                           className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition-colors"

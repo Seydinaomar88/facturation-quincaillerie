@@ -1,3 +1,4 @@
+// src/api/clients.ts
 import axios from 'axios';
 import type { Client } from '../types';
 
@@ -29,4 +30,15 @@ export const fetchClients = async (): Promise<Client[]> => {
 export const createClient = async (clientData: { nom: string; telephone: string }): Promise<Client> => {
   const response = await api.post('/clients', clientData);
   return response.data.client;
+};
+
+// Mettre à jour un client
+export const updateClient = async (id: number, clientData: { nom: string; telephone: string }): Promise<Client> => {
+  const response = await api.put(`/clients/${id}`, clientData);
+  return response.data.client;
+};
+
+// Supprimer un client
+export const deleteClient = async (id: number): Promise<void> => {
+  await api.delete(`/clients/${id}`);
 };
